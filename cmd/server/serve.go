@@ -14,7 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// Serve ..
+// Serve ...
 func Serve() {
 	appCfg := config.AppCfg()
 
