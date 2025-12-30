@@ -175,3 +175,12 @@ DB_MAX_LIFETIME_CONNECTIONS=10
 ## ⚠️ License
 
 [MIT](https://opensource.org/licenses/MIT) &copy; [H.R. Shadhin](https://github.com/hrshadhin)
+
+
+## Deploy Your Own
+
+Deploy your own Golang project with Forgeon.
+
+Deploy the example using [Forgeon](https://forgeon.io?utm_source=github&utm_medium=readme&utm_campaign=forgeon-examples):
+
+[![Deploy with Forgeon](https://forgeon.io/images/button-deploy/png/deploy-to-forgeon-5.png)](https://forgeon.io/projects?import=1&no_upload=1&auto=0&git_url=https%3A%2F%2Fgithub.com%2Fforgeon-apps%2Fgo-boilerplate)
