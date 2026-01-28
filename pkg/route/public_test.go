@@ -121,7 +121,7 @@ func setUpTPuR() {
 		panic(err)
 	}
 
-	users := []model.CreateUser{
+	users := []model.User{
 		{
 			IsAdmin:   false,
 			IsActive:  true,

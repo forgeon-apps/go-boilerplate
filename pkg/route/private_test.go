@@ -293,7 +293,7 @@ func setUpUser() {
 		panic(err)
 	}
 
-	users := []model.CreateUser{
+	users := []model.User{
 		{
 			IsAdmin:   true,
 			IsActive:  true,

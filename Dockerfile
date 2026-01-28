@@ -1,43 +1,49 @@
+# syntax=docker/dockerfile:1.6
+
 # --- Stage 1: Builder ---
 FROM golang:1.23-alpine AS builder
 
-# Create unprivileged user
-RUN mkdir /user && \
-    echo 'nobody:x:65534:65534:nobody:/:' > /user/passwd && \
-    echo 'nobody:x:65534:' > /user/group
+RUN apk add --no-cache ca-certificates tzdata
 
-# Install certs
-RUN apk add --no-cache ca-certificates
+WORKDIR /src
 
-WORKDIR /build
-
-# Cache dependencies
+# Cache deps
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 # Copy source
 COPY . .
 
-# Build binary with optimizations
-# -ldflags="-s -w" removes debug info to shrink the size
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o go-boilerplate .
+# Build
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /out/go-boilerplate .
 
-# --- Stage 2: Final (Production) ---
-FROM scratch AS final
+# --- Stage 2: Runtime ---
+FROM scratch
 
-# Standard practice: Use uppercase for AS to avoid warnings
-COPY --from=builder /user/group /user/passwd /etc/
+# CA certs (for TLS to Supabase, etc.)
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Timezone data (optional, but helpful for logs)
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
-# Copy the binary
-COPY --from=builder /build/go-boilerplate /go-boilerplate
+# App binary
+COPY --from=builder /out/go-boilerplate /go-boilerplate
 
-# OPTIONAL: Only uncomment if you strictly need .env baked in 
-# and ensure it exists in your repo.
-# COPY --from=builder /build/.env / .env
+# Create writable dirs (scratch has nothing, so we "copy" empty dirs from builder)
+# We'll run as non-root numeric user (no passwd needed)
+COPY --from=builder /tmp /tmp
+
+# Runtime env: avoid "/.cache" permission errors
+ENV HOME=/tmp \
+    XDG_CACHE_HOME=/tmp/.cache \
+    GOMODCACHE=/tmp/gomodcache \
+    TZ=UTC
 
 EXPOSE 5000
 
-USER nobody:nobody
+# Run as unprivileged user (numeric works without /etc/passwd)
+USER 65534:65534
 
 ENTRYPOINT ["/go-boilerplate"]
