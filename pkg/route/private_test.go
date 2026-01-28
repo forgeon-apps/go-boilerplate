@@ -20,7 +20,7 @@ import (
 )
 
 var adminToken, token string
-var userID int
+var userID uuid.UUID
 var userIDs [2]int
 var bookIDS [10]string
 
@@ -40,7 +40,7 @@ func TestPrivateUserRoutes(t *testing.T) {
 	}{
 		{
 			description:   "get user by ID",
-			route:         "/api/v1/users/" + strconv.Itoa(userID),
+			route:         "/api/v1/users/" + userID.String(),
 			expectedError: false,
 			expectedCode:  200,
 			tokenString:   "Bearer " + adminToken,
@@ -135,7 +135,7 @@ func TestPrivateUserRoutes(t *testing.T) {
 		},
 		{
 			description:   "update user",
-			route:         "/api/v1/users/" + strconv.Itoa(userID),
+			route:         "/api/v1/users/" + userID.String(),
 			method:        "PUT",
 			tokenString:   "Bearer " + adminToken,
 			body:          strings.NewReader(updateUser),
@@ -314,10 +314,26 @@ func setUpUser() {
 		},
 	}
 	userRepo := repository.NewUserRepo(database.GetDB())
-	for _, user := range users {
-		user.Password, _ = controller.GeneratePasswordHash([]byte(user.Password))
 
-		if err := userRepo.Create(&user); err != nil {
+	for i := range users {
+		u := users[i] // take by index (no range-variable pointer bug)
+
+		hash, err := controller.GeneratePasswordHash([]byte(u.Password))
+		if err != nil {
+			panic(err)
+		}
+
+		dbUser := &model.User{
+			ID:           uuid.New(),
+			Email:        u.Email,
+			Name:         u.UserName,
+			Username:     &u.UserName,
+			PasswordHash: &hash,
+			IsActive:     true,
+			IsAdmin:      u.IsAdmin,
+		}
+
+		if err := userRepo.Create(dbUser); err != nil {
 			panic(err)
 		}
 	}
@@ -327,7 +343,6 @@ func setUpUser() {
 		panic(err)
 	}
 	userID = user.ID
-	userIDs[0] = user.ID
 
 	adminToken, err = controller.GenerateNewAccessToken(user.ID, user.IsAdmin)
 	if err != nil {
@@ -338,7 +353,6 @@ func setUpUser() {
 	if err != nil {
 		panic(err)
 	}
-	userIDs[1] = user.ID
 	token, err = controller.GenerateNewAccessToken(user.ID, user.IsAdmin)
 	if err != nil {
 		panic(err)

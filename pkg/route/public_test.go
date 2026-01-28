@@ -142,13 +142,30 @@ func setUpTPuR() {
 		},
 	}
 	userRepo := repository.NewUserRepo(database.GetDB())
-	for _, user := range users {
-		user.Password, _ = controller.GeneratePasswordHash([]byte(user.Password))
 
-		if err := userRepo.Create(&user); err != nil {
+	for i := range users {
+		u := users[i] // take by index (no range-variable pointer bug)
+
+		hash, err := controller.GeneratePasswordHash([]byte(u.Password))
+		if err != nil {
+			panic(err)
+		}
+
+		dbUser := &model.User{
+			ID:           uuid.New(),
+			Email:        u.Email,
+			Name:         u.UserName,
+			Username:     &u.UserName,
+			PasswordHash: &hash,
+			IsActive:     true,
+			IsAdmin:      u.IsAdmin,
+		}
+
+		if err := userRepo.Create(dbUser); err != nil {
 			panic(err)
 		}
 	}
+
 }
 
 func tearDownTPuR() {

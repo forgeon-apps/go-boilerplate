@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/byeblogs/go-boilerplate/app/model"
+	"github.com/google/uuid"
 )
 
 // ###########################
@@ -11,7 +12,8 @@ import (
 // ###########################
 
 type User struct {
-	ID        int        `json:"id"`
+	ID uuid.UUID `db:"id" json:"id"`
+
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
 	IsActive  bool       `json:"is_active"`
@@ -26,7 +28,7 @@ func ToUser(u *model.User) *User {
 	return &User{
 		ID:        u.ID,
 		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
+		UpdatedAt: &u.UpdatedAt,
 		IsActive:  u.IsActive,
 		IsAdmin:   u.IsAdmin,
 		UserName:  u.UserName,

@@ -10,6 +10,7 @@ import (
 	"github.com/byeblogs/go-boilerplate/platform/database"
 	jwt "github.com/form3tech-oss/jwt-go"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -29,38 +30,30 @@ import (
 func GetNewAccessToken(c *fiber.Ctx) error {
 	login := &model.Auth{}
 	if err := c.BodyParser(login); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"msg": err.Error()})
 	}
+
 	userRepo := repo.NewUserRepo(database.GetDB())
 	user, err := userRepo.GetByUsername(login.Username)
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"msg": "username not found",
-		})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"msg": "username not found"})
 	}
 
-	isValid := IsValidPassword([]byte(user.Password), []byte(login.Password))
-	if !isValid {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"msg": "password is wrong",
-		})
+	if user.PasswordHash == nil || *user.PasswordHash == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"msg": "user has no password set"})
+	}
+
+	if !IsValidPassword([]byte(*user.PasswordHash), []byte(login.Password)) {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"msg": "password is wrong"})
 	}
 
 	if !user.IsActive {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"msg": "user not active anymore.",
-		})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"msg": "user not active anymore."})
 	}
 
-	// Generate a new Access token.
 	token, err := GenerateNewAccessToken(user.ID, user.IsAdmin)
 	if err != nil {
-		// Return status 500 and token generation error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"msg": err.Error()})
 	}
 
 	return c.JSON(fiber.Map{
@@ -69,23 +62,17 @@ func GetNewAccessToken(c *fiber.Ctx) error {
 	})
 }
 
-func GenerateNewAccessToken(userID int, isAdmin bool) (string, error) {
-	// Create token
+func GenerateNewAccessToken(userID uuid.UUID, isAdmin bool) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
-	// Set claims
 	claims := token.Claims.(jwt.MapClaims)
-	claims["user_id"] = userID
+	claims["user_id"] = userID.String()
 	claims["admin"] = isAdmin
-	claims["exp"] = time.Now().Add(time.Minute * time.Duration(config.AppCfg().JWTSecretExpireMinutesCount)).Unix()
+	claims["exp"] = time.Now().
+		Add(time.Minute * time.Duration(config.AppCfg().JWTSecretExpireMinutesCount)).
+		Unix()
 
-	// Generate encoded token and send it as response.
-	t, err := token.SignedString([]byte(config.AppCfg().JWTSecretKey))
-	if err != nil {
-		return "", err
-	}
-
-	return t, nil
+	return token.SignedString([]byte(config.AppCfg().JWTSecretKey))
 }
 
 func GeneratePasswordHash(password []byte) (string, error) {
@@ -93,15 +80,9 @@ func GeneratePasswordHash(password []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return string(hashedPassword), nil
 }
 
 func IsValidPassword(hash, password []byte) bool {
-	err := bcrypt.CompareHashAndPassword(hash, password)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return bcrypt.CompareHashAndPassword(hash, password) == nil
 }

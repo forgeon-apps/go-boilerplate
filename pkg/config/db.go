@@ -47,7 +47,13 @@ func LoadDBCfg() {
 	db.User = firstNonEmpty(os.Getenv("DB_USER"), os.Getenv("POSTGRES_USER"), os.Getenv("PGUSER"))
 	db.Password = firstNonEmpty(os.Getenv("DB_PASSWORD"), os.Getenv("DB_PASS"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("PGPASSWORD"))
 	db.Name = firstNonEmpty(os.Getenv("DB_NAME"), os.Getenv("POSTGRES_DB"), os.Getenv("PGDATABASE"))
-	db.SslMode = strings.ToLower(strings.TrimSpace(firstNonEmpty(os.Getenv("DB_SSL_MODE"), os.Getenv("PGSSLMODE"), os.Getenv("SSLMODE"))))
+	db.SslMode = strings.ToLower(strings.TrimSpace(firstNonEmpty(
+		os.Getenv("DB_SSL_MODE"), // your current key
+		os.Getenv("DB_SSLMODE"),  // common variant
+		os.Getenv("DB_SSLMODE"),  // (yes, keep it if you want)
+		os.Getenv("PGSSLMODE"),
+		os.Getenv("SSLMODE"),
+	)))
 
 	db.Debug = firstBool(false, os.Getenv("DB_DEBUG"))
 	db.MaxOpenConn = firstInt(10, os.Getenv("DB_MAX_OPEN_CONNECTIONS"))
@@ -62,7 +68,8 @@ func fillDBDefaults(c *DB) {
 		c.Port = 5432
 	}
 	if c.SslMode == "" {
-		c.SslMode = "disable"
+		// Supabase Postgres requires TLS
+		c.SslMode = "require"
 	}
 	// Hard fail early with a clear message if critical fields are missing.
 	if c.Host == "" || c.User == "" || c.Name == "" {

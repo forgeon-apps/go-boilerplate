@@ -1,111 +1,60 @@
 package controller
 
 import (
-	"strconv"
-
-	"github.com/byeblogs/go-boilerplate/app/dto"
 	"github.com/byeblogs/go-boilerplate/app/model"
 	repo "github.com/byeblogs/go-boilerplate/app/repository"
 	"github.com/byeblogs/go-boilerplate/pkg/validator"
 	"github.com/byeblogs/go-boilerplate/platform/database"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
-// GetUsers func gets all exists user.
-// @Description Get all exists user.
-// @Summary get all exists user
-// @Tags User
-// @Accept json
-// @Produce json
-// @Param page query integer false "Page no"
-// @Param page_size query integer false "records per page"
-// @Success 200 {object} dto.User "Ok"
-// @Failure 400 {object} model.ErrorResponse "Bad Request"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 404 {object} model.ErrorResponse "Not Found"
-// @Security ApiKeyAuth
-// @Router /v1/users [get]
+// GetUsers @Router /v1/users [get]
 func GetUsers(c *fiber.Ctx) error {
 	pageNo, pageSize := GetPagination(c)
+
 	userRepo := repo.NewUserRepo(database.GetDB())
 	users, err := userRepo.All(pageSize, uint(pageSize*(pageNo-1)))
-
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"msg": "users were not found",
-		})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"msg": "users were not found"})
 	}
 
 	return c.JSON(fiber.Map{
 		"page":      pageNo,
 		"page_size": pageSize,
 		"count":     len(users),
-		"users":     dto.ToUsers(users),
+		"users":     users,
 	})
 }
 
-// GetUser func gets a user.
-// @Description a user.
-// @Summary get a user
-// @Tags User
-// @Accept json
-// @Produce json
-// @Param id path string true "User ID"
-// @Success 200 {object} dto.User "Ok"
-// @Failure 400 {object} model.ErrorResponse "Bad Request"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 404 {object} model.ErrorResponse "Not Found"
-// @Security ApiKeyAuth
-// @Router /v1/users/{id} [get]
+// GetUser @Router /v1/users/{id} [get]
 func GetUser(c *fiber.Ctx) error {
-	ID, err := strconv.ParseInt(c.Params("id"), 10, 32)
+	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"msg": err.Error()})
 	}
+
 	userRepo := repo.NewUserRepo(database.GetDB())
-	user, err := userRepo.Get(int(ID))
-
+	u, err := userRepo.Get(id)
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"msg": "user were not found",
-		})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"msg": "user was not found"})
 	}
 
-	return c.JSON(fiber.Map{
-		"user": dto.ToUser(user),
-	})
+	return c.JSON(fiber.Map{"user": u})
 }
 
-// CreateUser func for creates a new user.
-// @Description Create a new user.
-// @Summary create a new user
-// @Tags User
-// @Accept json
-// @Produce json
-// @Param createuser body model.CreateUser true "Create new user"
-// @Failure 400 {object} model.ErrorResponse "Bad Request"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 404 {object} model.ErrorResponse "Not Found"
-// @Success 200 {object} dto.User "Ok" status "Ok"
-// @Security ApiKeyAuth
+// CreateUser @Security ApiKeyAuth
 // @Router /v1/users [post]
 func CreateUser(c *fiber.Ctx) error {
-	// Create new Book struct
-	user := &model.CreateUser{}
-
-	if err := c.BodyParser(user); err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+	u := &model.User{}
+	if err := c.BodyParser(u); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"msg": err.Error()})
 	}
 
-	// Create a new validator for a User model.
+	u.ID = uuid.New()
+
 	validate := validator.NewValidator()
-	if err := validate.Struct(user); err != nil {
-		// Return, if some fields are not valid.
+	if err := validate.Struct(u); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"msg":    "invalid input found",
 			"errors": validator.ValidatorErrors(err),
@@ -113,138 +62,69 @@ func CreateUser(c *fiber.Ctx) error {
 	}
 
 	userRepo := repo.NewUserRepo(database.GetDB())
-	// check user already exists
-	exists, err := userRepo.Exists(user.UserName, user.Email)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
-	}
-	if exists {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-			"msg": "user with this username or email already exists",
-		})
+	if err := userRepo.Create(u); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"msg": err.Error()})
 	}
 
-	user.Password, _ = GeneratePasswordHash([]byte(user.Password))
-	if err := userRepo.Create(user); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
-	}
-
-	dbUser, err := userRepo.GetByUsername(user.UserName)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"user": dto.ToUser(dbUser),
-	})
+	return c.JSON(fiber.Map{"user": u})
 }
 
-// UpdateUser func update a user.
-// @Description first_name, last_name, is_active, is_admin only
-// @Summary update a user
-// @Tags User
-// @Accept json
-// @Produce json
-// @Param id path string true "User ID"
-// @Param updateuser body model.UpdateUser true "Update a user"
-// @Success 200 {object} dto.User "Ok"
-// @Failure 400 {object} model.ErrorResponse "Bad Request"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 404 {object} model.ErrorResponse "Not Found"
-// @Security ApiKeyAuth
+// UpdateUser @Security ApiKeyAuth
 // @Router /v1/users/{id} [put]
 func UpdateUser(c *fiber.Ctx) error {
-	ID64, err := strconv.ParseInt(c.Params("id"), 10, 32)
+	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"msg": err.Error()})
 	}
-	ID := int(ID64)
+
 	userRepo := repo.NewUserRepo(database.GetDB())
-	_, err = userRepo.Get(ID)
+	_, err = userRepo.Get(id)
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"msg": "user were not found",
-		})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"msg": "user was not found"})
 	}
 
-	user := &model.UpdateUser{}
-	if err := c.BodyParser(user); err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+	u := &model.User{}
+	if err := c.BodyParser(u); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"msg": err.Error()})
 	}
+	u.ID = id
 
-	// Create a new validator for a User model.
 	validate := validator.NewValidator()
-	if err := validate.Struct(user); err != nil {
-		// Return, if some fields are not valid.
+	if err := validate.Struct(u); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"msg":    "invalid input found",
 			"errors": validator.ValidatorErrors(err),
 		})
 	}
 
-	if err := userRepo.Update(ID, user); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+	if err := userRepo.Update(id, u); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"msg": err.Error()})
 	}
 
-	dbUser, err := userRepo.Get(ID)
+	dbUser, err := userRepo.Get(id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"msg": err.Error()})
 	}
 
-	return c.JSON(fiber.Map{
-		"user": dto.ToUser(dbUser),
-	})
+	return c.JSON(fiber.Map{"user": dbUser})
 }
 
-// DeleteUser func delete a user.
-// @Description delete user
-// @Summary delete a user
-// @Tags User
-// @Accept json
-// @Produce json
-// @Param id path string true "User ID"
-// @Success 200 {object} interface{} "Ok"
-// @Failure 400 {object} model.ErrorResponse "Bad Request"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 404 {object} model.ErrorResponse "Not Found"
-// @Security ApiKeyAuth
+// DeleteUser @Security ApiKeyAuth
 // @Router /v1/users/{id} [delete]
 func DeleteUser(c *fiber.Ctx) error {
-	ID64, err := strconv.ParseInt(c.Params("id"), 10, 32)
+	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
-	}
-	ID := int(ID64)
-	userRepo := repo.NewUserRepo(database.GetDB())
-	_, err = userRepo.Get(ID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"msg": "user were not found",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"msg": err.Error()})
 	}
 
-	err = userRepo.Delete(ID)
+	userRepo := repo.NewUserRepo(database.GetDB())
+	_, err = userRepo.Get(id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"msg": err.Error(),
-		})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"msg": "user was not found"})
+	}
+
+	if err := userRepo.Delete(id); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"msg": err.Error()})
 	}
 
 	return c.JSON(fiber.Map{})
