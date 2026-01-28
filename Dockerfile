@@ -1,40 +1,43 @@
+# --- Stage 1: Builder ---
 FROM golang:1.23-alpine AS builder
 
-# run the process as an unprivileged user.
+# Create unprivileged user
 RUN mkdir /user && \
     echo 'nobody:x:65534:65534:nobody:/:' > /user/passwd && \
     echo 'nobody:x:65534:' > /user/group
 
-#Install certs
+# Install certs
 RUN apk add --no-cache ca-certificates
 
-# Working directory outside $GOPATH
 WORKDIR /build
 
-# Copy go module files and download dependencies
-COPY go.* ./
+# Cache dependencies
+COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source files
+# Copy source
 COPY . .
 
-# Build source
+# Build binary with optimizations
+# -ldflags="-s -w" removes debug info to shrink the size
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o go-boilerplate .
 
-# Minimal image for running the application
-FROM scratch as final
+# --- Stage 2: Final (Production) ---
+FROM scratch AS final
 
-# Import the user and group files from the first stage.
+# Standard practice: Use uppercase for AS to avoid warnings
 COPY --from=builder /user/group /user/passwd /etc/
-# Import the Certificate-Authority certificates for enabling HTTPS.
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-# Import the compiled executable from the first stage.
-COPY --from=builder ["/build/go-boilerplate", "/build/.env", "/"]
 
-# Open port
+# Copy the binary
+COPY --from=builder /build/go-boilerplate /go-boilerplate
+
+# OPTIONAL: Only uncomment if you strictly need .env baked in 
+# and ensure it exists in your repo.
+# COPY --from=builder /build/.env / .env
+
 EXPOSE 5000
 
-# Will run as unprivileged user/group
 USER nobody:nobody
 
 ENTRYPOINT ["/go-boilerplate"]
