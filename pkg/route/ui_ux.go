@@ -30,11 +30,13 @@ const htmlShellTemplate = `<!doctype html>
 <head>
   <meta charset="utf-8" />
   <title>{{TITLE}}</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
   <style>
     :root{
       color-scheme: dark;
       --bg:#050505;
+      --bg2:#070707;
       --card:#0f0f10;
       --panel:#0b0b0c;
       --border:#222;
@@ -45,51 +47,83 @@ const htmlShellTemplate = `<!doctype html>
       --good:#22c55e;
       --warn:#f59e0b;
       --dim:#6b7280;
-      --shadow: 0 10px 30px rgba(0,0,0,.45);
+      --shadow: 0 18px 50px rgba(0,0,0,.55);
+      --radius: 1.1rem;
+      --pad: clamp(.85rem, 2.2vw, 1.25rem);
     }
 
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
+    html{height:100%}
+    body{min-height:100%;}
 
-    /* ✅ Center horizontally, and center vertically only when there's room.
-       Still scrolls naturally when content is taller than the viewport. */
+    /* ✅ Mobile-friendly layout: no weird bottom bands, no forced vertical centering */
     body{
-      min-height:100vh;
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      color:var(--text);
+      padding:
+        calc(var(--pad) + env(safe-area-inset-top))
+        calc(var(--pad) + env(safe-area-inset-right))
+        calc(var(--pad) + env(safe-area-inset-bottom))
+        calc(var(--pad) + env(safe-area-inset-left));
+      overflow-x:hidden;
 
-      /* ✅ Avoid the harsh "band" by using a linear base gradient */
+      /* ✅ Soft black + subtle square grid */
       background:
         radial-gradient(900px circle at 15% -10%, rgba(255,255,255,.07), transparent 60%),
         radial-gradient(700px circle at 85% -5%, rgba(255,255,255,.06), transparent 65%),
-        linear-gradient(180deg, #111 0%, #050505 72%);
+        linear-gradient(180deg, #0b0b0c 0%, #050505 72%),
+        /* grid lines */
+        repeating-linear-gradient(0deg,
+          rgba(255,255,255,.06) 0px,
+          rgba(255,255,255,.06) 1px,
+          transparent 1px,
+          transparent 28px),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.05) 0px,
+          rgba(255,255,255,.05) 1px,
+          transparent 1px,
+          transparent 28px);
       background-attachment: fixed;
-
-      color:var(--text);
-      padding:1.25rem .9rem;
-
-      display:flex;
-      justify-content:center;   /* horizontal center for .wrap */
-      align-items:flex-start;   /* default: top for short viewports */
-    }
-    @media (min-height: 740px){
-      body{align-items:center;} /* vertical center when viewport is tall enough */
+      background-blend-mode: screen, screen, normal, normal, normal;
     }
 
-    .wrap{width:100%;max-width:1100px;}
+    /* Wrap */
+    .wrap{width:100%;max-width:1100px;margin:0 auto;}
     .card{
-      border-radius:1.1rem;
+      border-radius:var(--radius);
       border:1px solid var(--border);
       background:
         radial-gradient(circle at top left, rgba(255,255,255,.05) 0, rgba(255,255,255,0) 55%),
         radial-gradient(circle at bottom right, rgba(255,255,255,.03) 0, rgba(255,255,255,0) 60%),
         var(--card);
       box-shadow: var(--shadow);
-      padding:1.1rem;
+      padding: clamp(.9rem, 2vw, 1.1rem);
+      position:relative;
+      overflow:hidden;
     }
 
-    .panel { width: 100%; }
-    .nav a { scroll-snap-align: start; }
-    .nav { scroll-snap-type: x proximity; }
+    /* Top-left "Back to Home" */
+    .home-fab{
+      position: sticky;
+      top: calc(.25rem + env(safe-area-inset-top));
+      z-index: 10;
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      padding:.45rem .65rem;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(11,11,12,.9);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+      color: var(--accent);
+      text-decoration:none;
+      margin-bottom:.75rem;
+      width: fit-content;
+    }
+    .home-fab:hover{background: rgba(17,17,17,.92); border-color: var(--border2)}
+    .home-fab .ico svg{stroke: var(--accent)}
 
     /* Header block */
     .top{
@@ -116,7 +150,7 @@ const htmlShellTemplate = `<!doctype html>
     }
     p{font-size:.92rem;line-height:1.6;color:var(--muted)}
 
-    /* Rainbow animated headline */
+    /* Rainbow animated headline (kept for vibes) */
     .rainbow{
       background: linear-gradient(90deg,
         #ff3b3b, #ffb13b, #fff13b, #3bff7a, #3bbcff, #7a3bff, #ff3bbf, #ff3b3b);
@@ -144,15 +178,17 @@ const htmlShellTemplate = `<!doctype html>
     }
     .pill strong{color:var(--accent);font-weight:600}
 
-    /* Actions panel */
+    /* Panel */
     .panel{
       border:1px solid var(--border);
-      background: var(--panel);
+      background: rgba(11,11,12,.72);
       border-radius:1rem;
       padding:.9rem;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
 
-    .actions{display:flex;gap:.5rem;align-items:center;justify-content:space-between}
+    .actions{display:flex;gap:.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
     button{
       cursor:pointer;border:1px solid var(--border);
       background:#0b0b0c;color:var(--accent);
@@ -192,6 +228,7 @@ const htmlShellTemplate = `<!doctype html>
       padding-bottom:.25rem;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      scroll-snap-type: x proximity;
     }
     .nav::-webkit-scrollbar{display:none}
 
@@ -203,12 +240,14 @@ const htmlShellTemplate = `<!doctype html>
       padding:.42rem .75rem;
       font-size:.8rem;
       color:var(--accent);
-      background:#0b0b0c;
+      background: rgba(11,11,12,.8);
       transition: background .12s ease, border-color .12s ease;
       white-space:nowrap;
+      scroll-snap-align: start;
+      text-decoration:none;
     }
-    .nav a:hover{background:#111}
-    .nav a.active{border-color:#3a3a3a;background:#141414}
+    .nav a:hover{background:rgba(17,17,17,.9)}
+    .nav a.active{border-color:#3a3a3a;background:rgba(20,20,20,.95)}
 
     .ico{width:16px;height:16px;display:inline-block}
     .ico svg{
@@ -223,16 +262,18 @@ const htmlShellTemplate = `<!doctype html>
     .stack-badge{
       display:inline-flex;align-items:center;gap:.45rem;
       border:1px solid var(--border);
-      background:#0b0b0c;
+      background: rgba(11,11,12,.8);
       border-radius:999px;
       padding:.28rem .6rem;
       font-size:.78rem;
       color:var(--muted);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
     .stack-badge svg{width:16px;height:16px;display:block}
     .stack-badge strong{color:var(--accent);font-weight:600}
 
-    /* Table container: scroll on mobile */
+    /* Table container: scroll only inside on mobile (no body horizontal scroll) */
     .table{
       width:100%;
       margin-top:1rem;
@@ -253,12 +294,14 @@ const htmlShellTemplate = `<!doctype html>
       letter-spacing:.18em;
       text-transform:uppercase;
       color:var(--muted);
-      background:#0b0b0c;
+      background: rgba(11,11,12,.9);
       border-bottom:1px solid var(--border);
       padding:.8rem .9rem;
       position: sticky;
       top: 0;
       z-index: 1;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
     tbody td{
       padding:.78rem .9rem;
@@ -285,6 +328,7 @@ const htmlShellTemplate = `<!doctype html>
       font-size:.75rem;color:var(--muted);
       flex-wrap:wrap;
     }
+
     a{color:var(--accent);text-decoration:none}
     a:hover{text-decoration:underline}
 
@@ -295,23 +339,70 @@ const htmlShellTemplate = `<!doctype html>
       table{min-width: 640px}
     }
     @media (max-width: 420px){
-      body{padding:1rem .75rem}
+      body{padding:
+        calc(.9rem + env(safe-area-inset-top))
+        calc(.75rem + env(safe-area-inset-right))
+        calc(.9rem + env(safe-area-inset-bottom))
+        calc(.75rem + env(safe-area-inset-left));
+      }
       .card{padding:.95rem}
       h1{font-size:1.18rem}
       p{font-size:.9rem}
       button{width:100%}
-      .actions{flex-wrap:wrap;gap:.55rem}
+      .actions{gap:.55rem}
       .actions > *{flex:1 1 auto}
     }
   </style>
 </head>
 <body>
   <div class="wrap">
+    <a class="home-fab" href="/api/v1/ui" data-scroll-top="1" aria-label="Back to home">
+      <span class="ico">{{ICON_HOME}}</span>
+      Home
+    </a>
     <div class="card">{{BODY}}</div>
   </div>
 
   <script>
     const $ = (sel) => document.querySelector(sel)
+
+    // ✅ Always scroll to top when navigating via menu links.
+    // We also disable browser scroll restoration to avoid "stuck mid-page" on navigation.
+    try { history.scrollRestoration = 'manual' } catch(e) {}
+
+    function forceTopOnce(){
+      try{ sessionStorage.setItem('__forgeon_force_top__','1') }catch(e){}
+    }
+    function consumeForceTop(){
+      try{
+        const v = sessionStorage.getItem('__forgeon_force_top__')
+        if(v === '1'){
+          sessionStorage.removeItem('__forgeon_force_top__')
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+        }
+      }catch(e){}
+    }
+
+    window.addEventListener('pageshow', () => {
+      // Handles normal nav + bfcache restores
+      consumeForceTop()
+    })
+
+    document.addEventListener('click', (ev) => {
+      const a = ev.target && ev.target.closest ? ev.target.closest('a') : null
+      if(!a) return
+      if(a.hasAttribute('target')) return
+      const href = a.getAttribute('href') || ''
+      if(!href) return
+      // internal only
+      if(href.startsWith('#')) return
+      if(href.startsWith('http://') || href.startsWith('https://')) return
+
+      // If user clicks any menu/internal link, force top on next page.
+      forceTopOnce()
+      // And for same-page navigations, do it immediately too.
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    })
 
     function fmtDate(s){
       if(!s) return ''
@@ -345,8 +436,13 @@ func htmlShell(title, body, script string) string {
 	s = strings.ReplaceAll(s, "{{TITLE}}", html.EscapeString(title))
 	s = strings.ReplaceAll(s, "{{BODY}}", body)
 	s = strings.ReplaceAll(s, "{{SCRIPT}}", script)
+	s = strings.ReplaceAll(s, "{{ICON_HOME}}", iconHome())
 	return s
 }
+
+// ------------------------------------------------------------
+// Icons / badges
+// ------------------------------------------------------------
 
 func deviconGo() string {
 	return `<svg viewBox="0 0 128 128" aria-hidden="true" role="img">
@@ -380,7 +476,8 @@ func uiStackBadges() string {
 </div>`, deviconGo(), deviconSupabase())
 }
 
-func uiTop(title, desc, nav string) string {
+func uiTop(title, desc, nav, right string) string {
+	// right can be empty -> it collapses fine on mobile
 	return fmt.Sprintf(`
 <div class="top">
   <div>
@@ -390,11 +487,13 @@ func uiTop(title, desc, nav string) string {
     %s
     %s
   </div>
+  %s
 </div>`,
 		html.EscapeString(title),
 		html.EscapeString(desc),
 		uiStackBadges(),
 		nav,
+		right,
 	)
 }
 
@@ -419,7 +518,7 @@ func uiNav(activePath string) string {
 		if it.href == activePath {
 			cl = ` class="active"`
 		}
-		b.WriteString(fmt.Sprintf(`<a%s href="%s"><span class="ico">%s</span>%s</a>`,
+		b.WriteString(fmt.Sprintf(`<a%s href="%s" data-scroll-top="1"><span class="ico">%s</span>%s</a>`,
 			cl,
 			html.EscapeString(it.href),
 			it.icon,
@@ -459,16 +558,17 @@ func UIHomePage(c *fiber.Ctx) error {
 		"UI demo pages for FE - (Golang + Supabase)",
 		"HTML + fetch pages backed by your real JSON endpoints.",
 		uiNav("/api/v1/ui"),
+		"",
 	) + `
 <div class="table">
   <div class="table-scroll">
 	<table>
 		<thead><tr><th>Page</th><th>Purpose</th><th>API used</th></tr></thead>
 		<tbody>
-		<tr><td><a href="/api/v1/ui/users">/api/v1/ui/users</a></td><td class="muted">List users</td><td class="muted"><code>/api/v1/users</code></td></tr>
-		<tr><td><a href="/api/v1/ui/projects">/api/v1/ui/projects</a></td><td class="muted">List projects</td><td class="muted"><code>/api/v1/projects</code></td></tr>
-		<tr><td><a href="/api/v1/ui/tasks">/api/v1/ui/tasks</a></td><td class="muted">List tasks</td><td class="muted"><code>/api/v1/tasks</code></td></tr>
-		<tr><td><a href="/api/v1/ui/books">/api/v1/ui/books</a></td><td class="muted">List books</td><td class="muted"><code>/api/v1/books</code></td></tr>
+		<tr><td><a href="/api/v1/ui/users" data-scroll-top="1">/api/v1/ui/users</a></td><td class="muted">List users</td><td class="muted"><code>/api/v1/users</code></td></tr>
+		<tr><td><a href="/api/v1/ui/projects" data-scroll-top="1">/api/v1/ui/projects</a></td><td class="muted">List projects</td><td class="muted"><code>/api/v1/projects</code></td></tr>
+		<tr><td><a href="/api/v1/ui/tasks" data-scroll-top="1">/api/v1/ui/tasks</a></td><td class="muted">List tasks</td><td class="muted"><code>/api/v1/tasks</code></td></tr>
+		<tr><td><a href="/api/v1/ui/books" data-scroll-top="1">/api/v1/ui/books</a></td><td class="muted">List books</td><td class="muted"><code>/api/v1/books</code></td></tr>
 		</tbody>
 	</table>
   </div>
@@ -485,15 +585,7 @@ func UIHomePage(c *fiber.Ctx) error {
 func UITasksPage(c *fiber.Ctx) error {
 	now := time.Now().Format(time.RFC3339)
 
-	body := fmt.Sprintf(`
-<div class="top">
-  <div>
-    <div class="eyebrow">Forgeon · Tasks UI</div>
-    <h1 class="rainbow">Tasks dashboard</h1>
-    <p>Calls <code>/api/v1/tasks</code> and renders real data.</p>
-    %s
-  </div>
-
+	right := fmt.Sprintf(`
   <div class="panel">
     <div class="actions">
       <button id="reload">Reload</button>
@@ -507,9 +599,14 @@ func UITasksPage(c *fiber.Ctx) error {
       <div class="pill">page_size: <strong id="page_size">10</strong></div>
     </div>
     <div class="muted" style="margin-top:.35rem">Rendered: <code>%s</code></div>
-  </div>
-</div>
+  </div>`, html.EscapeString(now))
 
+	body := uiTop(
+		"Tasks dashboard",
+		"Calls /api/v1/tasks and renders real data.",
+		uiNav("/api/v1/ui/tasks"),
+		right,
+	) + `
 <div class="table">
   <div class="table-scroll">
   <table>
@@ -535,7 +632,7 @@ func UITasksPage(c *fiber.Ctx) error {
 </div>
 
 <pre><code id="raw"></code></pre>
-`, uiNav("/api/v1/ui/tasks"), html.EscapeString(now))
+`
 
 	script := `
 function render(payload){
@@ -578,15 +675,7 @@ load()
 }
 
 func UIUsersPage(c *fiber.Ctx) error {
-	body := fmt.Sprintf(`
-<div class="top">
-  <div>
-    <div class="eyebrow">Forgeon · Users UI</div>
-    <h1>Users list</h1>
-    <p>Calls <code>/api/v1/users</code> and renders real data.</p>
-    %s
-  </div>
-
+	right := `
   <div class="panel">
     <div class="actions">
       <button id="reload">Reload</button>
@@ -594,9 +683,14 @@ func UIUsersPage(c *fiber.Ctx) error {
     </div>
     <div class="hint">API URL</div>
     <input id="api" value="/api/v1/users?page=1&page_size=10" />
-  </div>
-</div>
+  </div>`
 
+	body := uiTop(
+		"Users list",
+		"Calls /api/v1/users and renders real data.",
+		uiNav("/api/v1/ui/users"),
+		right,
+	) + `
 <div class="table">
   <div class="table-scroll">
   <table>
@@ -621,7 +715,7 @@ func UIUsersPage(c *fiber.Ctx) error {
 </div>
 
 <pre><code id="raw"></code></pre>
-`, uiNav("/api/v1/ui/users"))
+`
 
 	script := `
 function render(payload){
@@ -663,15 +757,7 @@ load()
 }
 
 func UIProjectsPage(c *fiber.Ctx) error {
-	body := fmt.Sprintf(`
-<div class="top">
-  <div>
-    <div class="eyebrow">Forgeon · Projects UI</div>
-    <h1>Projects list</h1>
-    <p>Calls <code>/api/v1/projects</code> and renders real data.</p>
-    %s
-  </div>
-
+	right := `
   <div class="panel">
     <div class="actions">
       <button id="reload">Reload</button>
@@ -679,9 +765,14 @@ func UIProjectsPage(c *fiber.Ctx) error {
     </div>
     <div class="hint">API URL</div>
     <input id="api" value="/api/v1/projects?page=1&page_size=10" />
-  </div>
-</div>
+  </div>`
 
+	body := uiTop(
+		"Projects list",
+		"Calls /api/v1/projects and renders real data.",
+		uiNav("/api/v1/ui/projects"),
+		right,
+	) + `
 <div class="table">
   <div class="table-scroll">
   <table>
@@ -706,7 +797,7 @@ func UIProjectsPage(c *fiber.Ctx) error {
 </div>
 
 <pre><code id="raw"></code></pre>
-`, uiNav("/api/v1/ui/projects"))
+`
 
 	script := `
 function render(payload){
@@ -744,15 +835,7 @@ load()
 }
 
 func UIBooksPage(c *fiber.Ctx) error {
-	body := fmt.Sprintf(`
-<div class="top">
-  <div>
-    <div class="eyebrow">Forgeon · Books UI</div>
-    <h1>Books list</h1>
-    <p>Calls <code>/api/v1/books</code> and renders real data.</p>
-    %s
-  </div>
-
+	right := `
   <div class="panel">
     <div class="actions">
       <button id="reload">Reload</button>
@@ -760,9 +843,14 @@ func UIBooksPage(c *fiber.Ctx) error {
     </div>
     <div class="hint">API URL</div>
     <input id="api" value="/api/v1/books?page=1&page_size=10" />
-  </div>
-</div>
+  </div>`
 
+	body := uiTop(
+		"Books list",
+		"Calls /api/v1/books and renders real data.",
+		uiNav("/api/v1/ui/books"),
+		right,
+	) + `
 <div class="table">
   <div class="table-scroll">
   <table>
@@ -787,7 +875,7 @@ func UIBooksPage(c *fiber.Ctx) error {
 </div>
 
 <pre><code id="raw"></code></pre>
-`, uiNav("/api/v1/ui/books"))
+`
 
 	script := `
 function render(payload){
