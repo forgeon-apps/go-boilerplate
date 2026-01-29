@@ -1,6 +1,3 @@
-// ✅ FULL PATCH: remove fmt.Sprintf from htmlShell (fix %!s(MISSING))
-// Drop-in: copy-paste replace your file (or at least htmlShell + imports)
-
 package route
 
 import (
@@ -25,17 +22,16 @@ func RegisterUI(route fiber.Router) {
 // HTML shell + shared helpers
 // ------------------------------------------------------------
 
-// NOTE:
-// We must NOT use fmt.Sprintf() here because CSS contains tons of "%" (0%, 100%, 55%, ...)
-// which fmt treats as formatting tokens and causes "%!s(MISSING)".
-func htmlShell(title, body, script string) string {
-	const tpl = `<!doctype html>
+// IMPORTANT:
+// We DO NOT use fmt.Sprintf for the shell template because CSS/JS contains lots of '%' like '0%' '100%'
+// which breaks fmt formatting and produces "%!s(MISSING)" artifacts.
+const htmlShellTemplate = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>{{TITLE}}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-   <style>
+  <style>
     :root{
       color-scheme: dark;
       --bg:#050505;
@@ -55,30 +51,31 @@ func htmlShell(title, body, script string) string {
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
 
-	body{
-		min-height:100vh;
-		font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
-		background:
-			radial-gradient(900px circle at 15% -10%, rgba(255,255,255,.07), transparent 55%),
-			radial-gradient(700px circle at 85% -5%, rgba(255,255,255,.06), transparent 60%),
-			radial-gradient(circle at top,#111 0,#050505 55%);
-		color:var(--text);
+    /* ✅ Center horizontally, and center vertically only when there's room.
+       Still scrolls naturally when content is taller than the viewport. */
+    body{
+      min-height:100vh;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
 
-		padding:1.25rem .9rem;
+      /* ✅ Avoid the harsh "band" by using a linear base gradient */
+      background:
+        radial-gradient(900px circle at 15% -10%, rgba(255,255,255,.07), transparent 60%),
+        radial-gradient(700px circle at 85% -5%, rgba(255,255,255,.06), transparent 65%),
+        linear-gradient(180deg, #111 0%, #050505 72%);
+      background-attachment: fixed;
 
-		/* ✅ center horizontally, and center vertically only if content is short */
-		display:flex;
-		justify-content:center;
-	}
+      color:var(--text);
+      padding:1.25rem .9rem;
 
-	.wrap{
-		width:100%;
-		max-width:1100px;
+      display:flex;
+      justify-content:center;   /* horizontal center for .wrap */
+      align-items:flex-start;   /* default: top for short viewports */
+    }
+    @media (min-height: 740px){
+      body{align-items:center;} /* vertical center when viewport is tall enough */
+    }
 
-		/* ✅ magic: centers vertically when possible, becomes top-aligned when content is tall */
-		margin:auto 0;
-	}
-
+    .wrap{width:100%;max-width:1100px;}
     .card{
       border-radius:1.1rem;
       border:1px solid var(--border);
@@ -90,9 +87,9 @@ func htmlShell(title, body, script string) string {
       padding:1.1rem;
     }
 
-	.panel { width: 100%; }
-	.nav a { scroll-snap-align: start; }
-	.nav { scroll-snap-type: x proximity; }
+    .panel { width: 100%; }
+    .nav a { scroll-snap-align: start; }
+    .nav { scroll-snap-type: x proximity; }
 
     /* Header block */
     .top{
@@ -343,17 +340,15 @@ func htmlShell(title, body, script string) string {
 </body>
 </html>`
 
-	// Title should be escaped (it lands in <title>), body/script are intentionally raw.
-	// Body already escapes dynamic JSON fields in JS via htmlEscape().
-	return strings.NewReplacer(
-		"{{TITLE}}", html.EscapeString(title),
-		"{{BODY}}", body,
-		"{{SCRIPT}}", script,
-	).Replace(tpl)
+func htmlShell(title, body, script string) string {
+	s := htmlShellTemplate
+	s = strings.ReplaceAll(s, "{{TITLE}}", html.EscapeString(title))
+	s = strings.ReplaceAll(s, "{{BODY}}", body)
+	s = strings.ReplaceAll(s, "{{SCRIPT}}", script)
+	return s
 }
 
 func deviconGo() string {
-	// simple Go mark (monochrome-friendly)
 	return `<svg viewBox="0 0 128 128" aria-hidden="true" role="img">
   <path fill="currentColor" d="M64 14c-28.7 0-52 17.8-52 39.7v20.6C12 96.2 35.3 114 64 114s52-17.8 52-39.7V53.7C116 31.8 92.7 14 64 14Zm0 12c21.7 0 40 12.8 40 27.7v20.6C104 89.2 85.7 102 64 102s-40-12.8-40-27.7V53.7C24 38.8 42.3 26 64 26Z"/>
   <path fill="currentColor" d="M52 56c-7.7 0-14 5.4-14 12s6.3 12 14 12 14-5.4 14-12-6.3-12-14-12Zm0 8c2.8 0 5 1.8 5 4s-2.2 4-5 4-5-1.8-5-4 2.2-4 5-4Z"/>
@@ -363,7 +358,6 @@ func deviconGo() string {
 }
 
 func deviconSupabase() string {
-	// Supabase "S" mark (monochrome-friendly)
 	return `<svg viewBox="0 0 128 128" aria-hidden="true" role="img">
   <path fill="currentColor" d="M77.6 7.7c-2.5-3-7.2-3-9.7 0L21.4 61.4c-1.6 1.9-2 4.6-1 6.9 1 2.3 3.3 3.8 5.8 3.8h28.5l-4.7 48.6c-.3 3 1.6 5.8 4.6 6.6 3 .8 6.2-.5 7.7-3.2l44.5-75.2c1.2-2 1.2-4.5.1-6.5-1.1-2.1-3.3-3.3-5.7-3.3H73.5L77.6 7.7Zm-5.3 43.4h24.2L62.8 108.6 66.7 64H32.2L72.3 18.3l-4.9 32.8Z"/>
 </svg>`
@@ -437,7 +431,7 @@ func uiNav(activePath string) string {
 }
 
 // ------------------------------------------------------------
-// Inline SVG icons (no emoji, no external deps)
+// Inline SVG icons
 // ------------------------------------------------------------
 
 func iconHome() string {
@@ -487,10 +481,6 @@ func UIHomePage(c *fiber.Ctx) error {
 `
 	return c.Type("html", "utf-8").SendString(htmlShell("Forgeon · UI", body, ""))
 }
-
-// -----------------------------
-// Tasks UI
-// -----------------------------
 
 func UITasksPage(c *fiber.Ctx) error {
 	now := time.Now().Format(time.RFC3339)
@@ -587,16 +577,12 @@ load()
 	return c.Status(200).Type("html", "utf-8").SendString(htmlShell("Forgeon · Tasks UI", body, script))
 }
 
-// -----------------------------
-// Users UI
-// -----------------------------
-
 func UIUsersPage(c *fiber.Ctx) error {
 	body := fmt.Sprintf(`
 <div class="top">
   <div>
     <div class="eyebrow">Forgeon · Users UI</div>
-    <h1 class="rainbow">Users list</h1>
+    <h1>Users list</h1>
     <p>Calls <code>/api/v1/users</code> and renders real data.</p>
     %s
   </div>
@@ -676,16 +662,12 @@ load()
 	return c.Type("html", "utf-8").SendString(htmlShell("Forgeon · Users UI", body, script))
 }
 
-// -----------------------------
-// Projects UI
-// -----------------------------
-
 func UIProjectsPage(c *fiber.Ctx) error {
 	body := fmt.Sprintf(`
 <div class="top">
   <div>
     <div class="eyebrow">Forgeon · Projects UI</div>
-    <h1 class="rainbow">Projects list</h1>
+    <h1>Projects list</h1>
     <p>Calls <code>/api/v1/projects</code> and renders real data.</p>
     %s
   </div>
@@ -761,16 +743,12 @@ load()
 	return c.Type("html", "utf-8").SendString(htmlShell("Forgeon · Projects UI", body, script))
 }
 
-// -----------------------------
-// Books UI
-// -----------------------------
-
 func UIBooksPage(c *fiber.Ctx) error {
 	body := fmt.Sprintf(`
 <div class="top">
   <div>
     <div class="eyebrow">Forgeon · Books UI</div>
-    <h1 class="rainbow">Books list</h1>
+    <h1>Books list</h1>
     <p>Calls <code>/api/v1/books</code> and renders real data.</p>
     %s
   </div>
