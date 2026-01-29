@@ -1,3 +1,6 @@
+// ✅ FULL PATCH: remove fmt.Sprintf from htmlShell (fix %!s(MISSING))
+// Drop-in: copy-paste replace your file (or at least htmlShell + imports)
+
 package route
 
 import (
@@ -22,109 +25,204 @@ func RegisterUI(route fiber.Router) {
 // HTML shell + shared helpers
 // ------------------------------------------------------------
 
+// NOTE:
+// We must NOT use fmt.Sprintf() here because CSS contains tons of "%" (0%, 100%, 55%, ...)
+// which fmt treats as formatting tokens and causes "%!s(MISSING)".
 func htmlShell(title, body, script string) string {
-	return fmt.Sprintf(`<!doctype html>
+	const tpl = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>%s</title>
+  <title>{{TITLE}}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
+   <style>
     :root{
       color-scheme: dark;
-      --bg:#050505; --card:#0f0f10; --border:#222;
-      --text:#f5f5f5; --muted:#9ca3af; --accent:#e5e5e5;
-      --good:#22c55e; --warn:#f59e0b; --dim:#6b7280;
-      --focus:#2a2a2a;
+      --bg:#050505;
+      --card:#0f0f10;
+      --panel:#0b0b0c;
+      --border:#222;
+      --border2:#2a2a2a;
+      --text:#f5f5f5;
+      --muted:#9ca3af;
+      --accent:#e5e5e5;
+      --good:#22c55e;
+      --warn:#f59e0b;
+      --dim:#6b7280;
+      --shadow: 0 10px 30px rgba(0,0,0,.45);
     }
+
     *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      min-height:100vh;
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
-      background:radial-gradient(circle at top,#111 0,#050505 55%%);
-      color:var(--text);
-      display:flex; align-items:center; justify-content:center;
-      padding:2rem 1.5rem;
-    }
-    .wrap{width:100%%;max-width:1100px}
+    html,body{height:100%}
+
+	body{
+		min-height:100vh;
+		font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+		background:
+			radial-gradient(900px circle at 15% -10%, rgba(255,255,255,.07), transparent 55%),
+			radial-gradient(700px circle at 85% -5%, rgba(255,255,255,.06), transparent 60%),
+			radial-gradient(circle at top,#111 0,#050505 55%);
+		color:var(--text);
+
+		padding:1.25rem .9rem;
+
+		/* ✅ center horizontally, and center vertically only if content is short */
+		display:flex;
+		justify-content:center;
+	}
+
+	.wrap{
+		width:100%;
+		max-width:1100px;
+
+		/* ✅ magic: centers vertically when possible, becomes top-aligned when content is tall */
+		margin:auto 0;
+	}
+
     .card{
-      border-radius:1.25rem;
+      border-radius:1.1rem;
       border:1px solid var(--border);
-      background:radial-gradient(circle at top left,#151515 0,var(--card) 50%%,#050505 100%%);
-      padding:1.5rem 1.5rem 1.25rem;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.05) 0, rgba(255,255,255,0) 55%),
+        radial-gradient(circle at bottom right, rgba(255,255,255,.03) 0, rgba(255,255,255,0) 60%),
+        var(--card);
+      box-shadow: var(--shadow);
+      padding:1.1rem;
     }
-    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem}
-    .eyebrow{font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem}
-    h1{font-size:1.35rem;line-height:1.2;margin-bottom:.4rem}
-    p{font-size:.9rem;line-height:1.6;color:var(--muted)}
-    .pill-row{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.85rem}
+
+	.panel { width: 100%; }
+	.nav a { scroll-snap-align: start; }
+	.nav { scroll-snap-type: x proximity; }
+
+    /* Header block */
+    .top{
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:1rem;
+      align-items:start;
+      margin-bottom:.9rem;
+    }
+
+    .eyebrow{
+      font-size:.7rem;
+      letter-spacing:.22em;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:.45rem
+    }
+
+    h1{
+      font-size:1.35rem;
+      line-height:1.15;
+      margin-bottom:.4rem;
+      letter-spacing:-.01em;
+    }
+    p{font-size:.92rem;line-height:1.6;color:var(--muted)}
+
+    /* Rainbow animated headline */
+    .rainbow{
+      background: linear-gradient(90deg,
+        #ff3b3b, #ffb13b, #fff13b, #3bff7a, #3bbcff, #7a3bff, #ff3bbf, #ff3b3b);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: rainbowMove 7s linear infinite;
+    }
+    @keyframes rainbowMove{
+      0%{background-position:0% 50%}
+      100%{background-position:100% 50%}
+    }
+    @media (prefers-reduced-motion: reduce){
+      .rainbow{animation:none}
+    }
+
+    /* Pills */
+    .pill-row{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.75rem}
     .pill{
       font-size:.7rem;text-transform:uppercase;letter-spacing:.16em;
-      padding:.25rem .6rem;border-radius:999px;border:1px solid var(--border);
-      color:var(--muted);display:inline-flex;gap:.4rem;align-items:center
+      padding:.22rem .55rem;border-radius:999px;border:1px solid var(--border);
+      color:var(--muted);display:inline-flex;gap:.4rem;align-items:center;
+      background: rgba(0,0,0,.12);
     }
     .pill strong{color:var(--accent);font-weight:600}
-    .actions{display:flex;gap:.5rem;align-items:center}
+
+    /* Actions panel */
+    .panel{
+      border:1px solid var(--border);
+      background: var(--panel);
+      border-radius:1rem;
+      padding:.9rem;
+    }
+
+    .actions{display:flex;gap:.5rem;align-items:center;justify-content:space-between}
     button{
-      cursor:pointer;border:1px solid var(--border);background:#0b0b0c;color:var(--accent);
-      border-radius:.75rem;padding:.5rem .75rem;font-size:.85rem;
+      cursor:pointer;border:1px solid var(--border);
+      background:#0b0b0c;color:var(--accent);
+      border-radius:.8rem;padding:.55rem .85rem;font-size:.88rem;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+      white-space:nowrap;
     }
-    button:hover{background:#111}
-    .hint{font-size:.75rem;color:var(--dim);margin-top:.35rem;text-align:right}
+    button:hover{background:#111;border-color:var(--border2)}
+    button:active{transform: translateY(1px)}
+    .hint{font-size:.75rem;color:var(--dim);margin-top:.55rem}
     input{
-      width:100%%;margin-top:.4rem;padding:.55rem .7rem;border-radius:.75rem;
-      border:1px solid var(--border);background:#0b0b0c;color:var(--accent);outline:none;
+      width:100%;
+      margin-top:.45rem;
+      padding:.62rem .75rem;
+      border-radius:.8rem;
+      border:1px solid var(--border);
+      background:#050505;
+      color:var(--accent);
+      outline:none;
     }
-    .table{
-      width:100%%;margin-top:1rem;border:1px solid var(--border);
-      border-radius:1rem;overflow:hidden;
-    }
-    table{width:100%%;border-collapse:collapse}
-    thead th{
-      text-align:left;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
-      background:#0b0b0c;border-bottom:1px solid var(--border);padding:.75rem .9rem;
-    }
-    tbody td{
-      padding:.75rem .9rem;border-bottom:1px solid rgba(34,34,34,.65);
-      vertical-align:top;font-size:.9rem;color:var(--accent);
-    }
-    tbody tr:hover{background:rgba(255,255,255,.02)}
+    input:focus{border-color:var(--border2)}
+
     .muted{color:var(--muted);font-size:.82rem}
     .right{white-space:nowrap}
-    code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:.8rem;color:var(--muted)}
-    .footer{
-      margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--border);
-      display:flex;justify-content:space-between;gap:.75rem;font-size:.75rem;color:var(--muted);
-    }
-    a{color:var(--accent);text-decoration:none}
-    a:hover{text-decoration:underline}
 
-    /* Nav */
-    .nav{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+    code{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:.82rem;color:var(--muted)
+    }
+
+    /* Nav chips (mobile friendly) */
+    .nav{
+      display:flex;
+      gap:.5rem;
+      margin-top:.75rem;
+      overflow:auto;
+      padding-bottom:.25rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .nav::-webkit-scrollbar{display:none}
+
     .nav a{
+      flex:0 0 auto;
       display:inline-flex;gap:.5rem;align-items:center;
-      border:1px solid var(--border);border-radius:999px;
-      padding:.35rem .65rem;font-size:.78rem;color:var(--accent);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:.42rem .75rem;
+      font-size:.8rem;
+      color:var(--accent);
       background:#0b0b0c;
       transition: background .12s ease, border-color .12s ease;
+      white-space:nowrap;
     }
     .nav a:hover{background:#111}
-    .nav a.active{
-      border-color: #3a3a3a;
-      background: #141414;
-    }
-    .ico{
-      width:16px;height:16px;display:inline-block;
-    }
-    .ico svg{width:16px;height:16px;display:block;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-    .nav a.active .ico svg{stroke:var(--accent)}
-    pre{margin-top:1rem;background:#050505;border:1px solid var(--border);border-radius:1rem;padding:1rem;overflow:auto}
+    .nav a.active{border-color:#3a3a3a;background:#141414}
 
-	    /* Stack badges */
-    .stack{
-      display:flex;align-items:center;gap:.55rem;
-      margin-top:.65rem;flex-wrap:wrap;
+    .ico{width:16px;height:16px;display:inline-block}
+    .ico svg{
+      width:16px;height:16px;display:block;
+      fill:none;stroke:var(--muted);stroke-width:1.8;
+      stroke-linecap:round;stroke-linejoin:round
     }
+    .nav a.active .ico svg{stroke:var(--accent)}
+
+    /* Stack badges */
+    .stack{display:flex;align-items:center;gap:.55rem;margin-top:.65rem;flex-wrap:wrap}
     .stack-badge{
       display:inline-flex;align-items:center;gap:.45rem;
       border:1px solid var(--border);
@@ -137,11 +235,82 @@ func htmlShell(title, body, script string) string {
     .stack-badge svg{width:16px;height:16px;display:block}
     .stack-badge strong{color:var(--accent);font-weight:600}
 
+    /* Table container: scroll on mobile */
+    .table{
+      width:100%;
+      margin-top:1rem;
+      border:1px solid var(--border);
+      border-radius:1rem;
+      overflow:hidden;
+      background: rgba(0,0,0,.06);
+    }
+    .table-scroll{
+      width:100%;
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    table{width:100%;border-collapse:collapse;min-width:720px}
+    thead th{
+      text-align:left;
+      font-size:.72rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      color:var(--muted);
+      background:#0b0b0c;
+      border-bottom:1px solid var(--border);
+      padding:.8rem .9rem;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tbody td{
+      padding:.78rem .9rem;
+      border-bottom:1px solid rgba(34,34,34,.65);
+      vertical-align:top;
+      font-size:.92rem;
+      color:var(--accent);
+    }
+    tbody tr:hover{background:rgba(255,255,255,.02)}
+
+    pre{
+      margin-top:1rem;
+      background:#050505;
+      border:1px solid var(--border);
+      border-radius:1rem;
+      padding:1rem;
+      overflow:auto;
+      max-height:320px;
+    }
+
+    .footer{
+      margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--border);
+      display:flex;justify-content:space-between;gap:.75rem;
+      font-size:.75rem;color:var(--muted);
+      flex-wrap:wrap;
+    }
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* Mobile breakpoints */
+    @media (max-width: 860px){
+      .top{grid-template-columns: 1fr}
+      .panel{padding:.85rem}
+      table{min-width: 640px}
+    }
+    @media (max-width: 420px){
+      body{padding:1rem .75rem}
+      .card{padding:.95rem}
+      h1{font-size:1.18rem}
+      p{font-size:.9rem}
+      button{width:100%}
+      .actions{flex-wrap:wrap;gap:.55rem}
+      .actions > *{flex:1 1 auto}
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">%s</div>
+    <div class="card">{{BODY}}</div>
   </div>
 
   <script>
@@ -169,10 +338,18 @@ func htmlShell(title, body, script string) string {
       return await res.json()
     }
 
-    %s
+    {{SCRIPT}}
   </script>
 </body>
-</html>`, html.EscapeString(title), body, script)
+</html>`
+
+	// Title should be escaped (it lands in <title>), body/script are intentionally raw.
+	// Body already escapes dynamic JSON fields in JS via htmlEscape().
+	return strings.NewReplacer(
+		"{{TITLE}}", html.EscapeString(title),
+		"{{BODY}}", body,
+		"{{SCRIPT}}", script,
+	).Replace(tpl)
 }
 
 func deviconGo() string {
@@ -214,7 +391,7 @@ func uiTop(title, desc, nav string) string {
 <div class="top">
   <div>
     <div class="eyebrow">Forgeon · UI</div>
-    <h1>%s</h1>
+    <h1 class="rainbow">%s</h1>
     <p>%s</p>
     %s
     %s
@@ -222,7 +399,7 @@ func uiTop(title, desc, nav string) string {
 </div>`,
 		html.EscapeString(title),
 		html.EscapeString(desc),
-		uiStackBadges(), // ✅ added here
+		uiStackBadges(),
 		nav,
 	)
 }
@@ -290,15 +467,17 @@ func UIHomePage(c *fiber.Ctx) error {
 		uiNav("/api/v1/ui"),
 	) + `
 <div class="table">
-  <table>
-    <thead><tr><th>Page</th><th>Purpose</th><th>API used</th></tr></thead>
-    <tbody>
-      <tr><td><a href="/api/v1/ui/users">/api/v1/ui/users</a></td><td class="muted">List users</td><td class="muted"><code>/api/v1/users</code></td></tr>
-      <tr><td><a href="/api/v1/ui/projects">/api/v1/ui/projects</a></td><td class="muted">List projects</td><td class="muted"><code>/api/v1/projects</code></td></tr>
-      <tr><td><a href="/api/v1/ui/tasks">/api/v1/ui/tasks</a></td><td class="muted">List tasks</td><td class="muted"><code>/api/v1/tasks</code></td></tr>
-      <tr><td><a href="/api/v1/ui/books">/api/v1/ui/books</a></td><td class="muted">List books</td><td class="muted"><code>/api/v1/books</code></td></tr>
-    </tbody>
-  </table>
+  <div class="table-scroll">
+	<table>
+		<thead><tr><th>Page</th><th>Purpose</th><th>API used</th></tr></thead>
+		<tbody>
+		<tr><td><a href="/api/v1/ui/users">/api/v1/ui/users</a></td><td class="muted">List users</td><td class="muted"><code>/api/v1/users</code></td></tr>
+		<tr><td><a href="/api/v1/ui/projects">/api/v1/ui/projects</a></td><td class="muted">List projects</td><td class="muted"><code>/api/v1/projects</code></td></tr>
+		<tr><td><a href="/api/v1/ui/tasks">/api/v1/ui/tasks</a></td><td class="muted">List tasks</td><td class="muted"><code>/api/v1/tasks</code></td></tr>
+		<tr><td><a href="/api/v1/ui/books">/api/v1/ui/books</a></td><td class="muted">List books</td><td class="muted"><code>/api/v1/books</code></td></tr>
+		</tbody>
+	</table>
+  </div>
 </div>
 
 <div class="footer">
@@ -320,12 +499,12 @@ func UITasksPage(c *fiber.Ctx) error {
 <div class="top">
   <div>
     <div class="eyebrow">Forgeon · Tasks UI</div>
-    <h1>Tasks dashboard</h1>
+    <h1 class="rainbow">Tasks dashboard</h1>
     <p>Calls <code>/api/v1/tasks</code> and renders real data.</p>
     %s
   </div>
 
-  <div style="min-width:320px">
+  <div class="panel">
     <div class="actions">
       <button id="reload">Reload</button>
       <span class="muted">Status: <strong id="status">…</strong></span>
@@ -342,6 +521,7 @@ func UITasksPage(c *fiber.Ctx) error {
 </div>
 
 <div class="table">
+  <div class="table-scroll">
   <table>
     <thead>
       <tr>
@@ -356,6 +536,7 @@ func UITasksPage(c *fiber.Ctx) error {
       <tr><td colspan="5" class="muted">Loading…</td></tr>
     </tbody>
   </table>
+</div>
 </div>
 
 <div class="footer">
@@ -415,12 +596,12 @@ func UIUsersPage(c *fiber.Ctx) error {
 <div class="top">
   <div>
     <div class="eyebrow">Forgeon · Users UI</div>
-    <h1>Users list</h1>
+    <h1 class="rainbow">Users list</h1>
     <p>Calls <code>/api/v1/users</code> and renders real data.</p>
     %s
   </div>
 
-  <div style="min-width:320px">
+  <div class="panel">
     <div class="actions">
       <button id="reload">Reload</button>
       <span class="muted">Status: <strong id="status">…</strong></span>
@@ -431,6 +612,7 @@ func UIUsersPage(c *fiber.Ctx) error {
 </div>
 
 <div class="table">
+  <div class="table-scroll">
   <table>
     <thead>
       <tr>
@@ -444,6 +626,7 @@ func UIUsersPage(c *fiber.Ctx) error {
       <tr><td colspan="4" class="muted">Loading…</td></tr>
     </tbody>
   </table>
+</div>
 </div>
 
 <div class="footer">
@@ -502,12 +685,12 @@ func UIProjectsPage(c *fiber.Ctx) error {
 <div class="top">
   <div>
     <div class="eyebrow">Forgeon · Projects UI</div>
-    <h1>Projects list</h1>
+    <h1 class="rainbow">Projects list</h1>
     <p>Calls <code>/api/v1/projects</code> and renders real data.</p>
     %s
   </div>
 
-  <div style="min-width:320px">
+  <div class="panel">
     <div class="actions">
       <button id="reload">Reload</button>
       <span class="muted">Status: <strong id="status">…</strong></span>
@@ -518,6 +701,7 @@ func UIProjectsPage(c *fiber.Ctx) error {
 </div>
 
 <div class="table">
+  <div class="table-scroll">
   <table>
     <thead>
       <tr>
@@ -531,6 +715,7 @@ func UIProjectsPage(c *fiber.Ctx) error {
       <tr><td colspan="4" class="muted">Loading…</td></tr>
     </tbody>
   </table>
+  </div>
 </div>
 
 <div class="footer">
@@ -585,12 +770,12 @@ func UIBooksPage(c *fiber.Ctx) error {
 <div class="top">
   <div>
     <div class="eyebrow">Forgeon · Books UI</div>
-    <h1>Books list</h1>
+    <h1 class="rainbow">Books list</h1>
     <p>Calls <code>/api/v1/books</code> and renders real data.</p>
     %s
   </div>
 
-  <div style="min-width:320px">
+  <div class="panel">
     <div class="actions">
       <button id="reload">Reload</button>
       <span class="muted">Status: <strong id="status">…</strong></span>
@@ -601,6 +786,7 @@ func UIBooksPage(c *fiber.Ctx) error {
 </div>
 
 <div class="table">
+  <div class="table-scroll">
   <table>
     <thead>
       <tr>
@@ -614,6 +800,7 @@ func UIBooksPage(c *fiber.Ctx) error {
       <tr><td colspan="4" class="muted">Loading…</td></tr>
     </tbody>
   </table>
+</div>
 </div>
 
 <div class="footer">
