@@ -119,6 +119,24 @@ func htmlShell(title, body, script string) string {
     .ico svg{width:16px;height:16px;display:block;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
     .nav a.active .ico svg{stroke:var(--accent)}
     pre{margin-top:1rem;background:#050505;border:1px solid var(--border);border-radius:1rem;padding:1rem;overflow:auto}
+
+	    /* Stack badges */
+    .stack{
+      display:flex;align-items:center;gap:.55rem;
+      margin-top:.65rem;flex-wrap:wrap;
+    }
+    .stack-badge{
+      display:inline-flex;align-items:center;gap:.45rem;
+      border:1px solid var(--border);
+      background:#0b0b0c;
+      border-radius:999px;
+      padding:.28rem .6rem;
+      font-size:.78rem;
+      color:var(--muted);
+    }
+    .stack-badge svg{width:16px;height:16px;display:block}
+    .stack-badge strong{color:var(--accent);font-weight:600}
+
   </style>
 </head>
 <body>
@@ -157,6 +175,40 @@ func htmlShell(title, body, script string) string {
 </html>`, html.EscapeString(title), body, script)
 }
 
+func deviconGo() string {
+	// simple Go mark (monochrome-friendly)
+	return `<svg viewBox="0 0 128 128" aria-hidden="true" role="img">
+  <path fill="currentColor" d="M64 14c-28.7 0-52 17.8-52 39.7v20.6C12 96.2 35.3 114 64 114s52-17.8 52-39.7V53.7C116 31.8 92.7 14 64 14Zm0 12c21.7 0 40 12.8 40 27.7v20.6C104 89.2 85.7 102 64 102s-40-12.8-40-27.7V53.7C24 38.8 42.3 26 64 26Z"/>
+  <path fill="currentColor" d="M52 56c-7.7 0-14 5.4-14 12s6.3 12 14 12 14-5.4 14-12-6.3-12-14-12Zm0 8c2.8 0 5 1.8 5 4s-2.2 4-5 4-5-1.8-5-4 2.2-4 5-4Z"/>
+  <path fill="currentColor" d="M82 56c-7.7 0-14 5.4-14 12s6.3 12 14 12 14-5.4 14-12-6.3-12-14-12Zm0 8c2.8 0 5 1.8 5 4s-2.2 4-5 4-5-1.8-5-4 2.2-4 5-4Z"/>
+  <path fill="currentColor" d="M73 88H55a6 6 0 0 1 0-12h18a6 6 0 0 1 0 12Z"/>
+</svg>`
+}
+
+func deviconSupabase() string {
+	// Supabase "S" mark (monochrome-friendly)
+	return `<svg viewBox="0 0 128 128" aria-hidden="true" role="img">
+  <path fill="currentColor" d="M77.6 7.7c-2.5-3-7.2-3-9.7 0L21.4 61.4c-1.6 1.9-2 4.6-1 6.9 1 2.3 3.3 3.8 5.8 3.8h28.5l-4.7 48.6c-.3 3 1.6 5.8 4.6 6.6 3 .8 6.2-.5 7.7-3.2l44.5-75.2c1.2-2 1.2-4.5.1-6.5-1.1-2.1-3.3-3.3-5.7-3.3H73.5L77.6 7.7Zm-5.3 43.4h24.2L62.8 108.6 66.7 64H32.2L72.3 18.3l-4.9 32.8Z"/>
+</svg>`
+}
+
+func uiStackBadges() string {
+	return fmt.Sprintf(`
+<div class="stack">
+  <span class="stack-badge" title="Golang">
+    <span style="color:var(--accent)">%s</span>
+    <strong>Go</strong>
+    <span>Fiber</span>
+  </span>
+
+  <span class="stack-badge" title="Supabase Postgres">
+    <span style="color:var(--accent)">%s</span>
+    <strong>Supabase</strong>
+    <span>Postgres</span>
+  </span>
+</div>`, deviconGo(), deviconSupabase())
+}
+
 func uiTop(title, desc, nav string) string {
 	return fmt.Sprintf(`
 <div class="top">
@@ -165,10 +217,12 @@ func uiTop(title, desc, nav string) string {
     <h1>%s</h1>
     <p>%s</p>
     %s
+    %s
   </div>
 </div>`,
 		html.EscapeString(title),
 		html.EscapeString(desc),
+		uiStackBadges(), // ✅ added here
 		nav,
 	)
 }
@@ -231,7 +285,7 @@ func iconBook() string {
 
 func UIHomePage(c *fiber.Ctx) error {
 	body := uiTop(
-		"UI demo pages for FE",
+		"UI demo pages for FE - (Golang + Supabase)",
 		"HTML + fetch pages backed by your real JSON endpoints.",
 		uiNav("/api/v1/ui"),
 	) + `
