@@ -1,13 +1,29 @@
 package route
 
 import (
+	"strings"
+
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/byeblogs/go-boilerplate/platform/database"
 	"github.com/gofiber/fiber/v2"
 )
 
 func GeneralRoute(a *fiber.App) {
+
 	a.Get("/", func(c *fiber.Ctx) error {
+		accept := c.Get("Accept")
+		if strings.Contains(accept, "application/json") {
+			return c.JSON(fiber.Map{
+				"msg":    "Welcome to Fiber Go API!",
+				"docs":   "/swagger/index.html",
+				"status": "/h34l7h",
+				"ui":     "/api/v1/ui",
+			})
+		}
+		return c.Redirect("/api/v1/ui", fiber.StatusFound)
+	})
+
+	a.Get("/healthz", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"msg":    "Welcome to Fiber Go API!",
 			"docs":   "/swagger/index.html",

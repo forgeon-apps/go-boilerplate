@@ -30,7 +30,7 @@ definitions:
       updated_at:
         type: string
       user_id:
-        type: integer
+        type: string
     required:
     - author
     - meta

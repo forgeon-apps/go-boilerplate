@@ -18,8 +18,17 @@ func NewBookRepo(db *database.DB) BookRepository {
 }
 
 func (repo *BookRepo) Create(b *model.Book) error {
-	query := `INSERT INTO book VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err := repo.db.Exec(query, b.ID, time.Now(), time.Now(), false, b.UserID, b.Title, b.Author, b.Status, b.Meta)
+	query := `
+		INSERT INTO public.book
+			(id, created_at, updated_at, is_deleted, user_id, title, author, status, meta)
+		VALUES
+			($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+	now := time.Now().UTC()
+	_, err := repo.db.Exec(query,
+		b.ID, now, now, false,
+		b.UserID, b.Title, b.Author, b.Status, b.Meta,
+	)
 	return err
 }
 

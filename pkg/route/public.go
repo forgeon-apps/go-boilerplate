@@ -35,4 +35,8 @@ func PublicRoutes(a *fiber.App) {
 	route.Put("/tasks/:id", controller.UpdateTask)
 	route.Delete("/tasks/:id", controller.DeleteTask)
 
+	// UI
+
+	RegisterUI(route)
+
 }

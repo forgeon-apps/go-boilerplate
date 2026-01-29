@@ -15,7 +15,7 @@ type Book struct {
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt *time.Time `db:"updated_at" json:"updated_at"`
 	IsDeleted bool       `db:"is_deleted" json:"is_deleted"`
-	UserID    int        `db:"user_id" json:"user_id" validate:"required"`
+	UserID    uuid.UUID  `db:"user_id" json:"user_id" validate:"required"`
 	Title     string     `db:"title" json:"title" validate:"required,lte=255"`
 	Author    string     `db:"author" json:"author" validate:"required,lte=255"`
 	Status    int        `db:"status" json:"status" validate:"required,len=1"`

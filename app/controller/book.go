@@ -26,13 +26,15 @@ import (
 // @Router /v1/books [get]
 func GetBooks(c *fiber.Ctx) error {
 	pageNo, pageSize := GetPagination(c)
+
 	bookRepo := repo.NewBookRepo(database.GetDB())
 	books, err := bookRepo.All(pageSize, uint(pageSize*(pageNo-1)))
-
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"msg": "books were not found",
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"msg": err.Error()})
+	}
+
+	if books == nil {
+		books = []*model.Book{}
 	}
 
 	return c.JSON(fiber.Map{
@@ -111,7 +113,7 @@ func CreateBook(c *fiber.Ctx) error {
 	}
 
 	book.ID = uuid.New()
-	book.UserID = int(userID.(float64))
+	book.UserID = uuid.MustParse(userID.(string))
 	book.Status = 1 // Active
 
 	// Create a new validator for a Book model.

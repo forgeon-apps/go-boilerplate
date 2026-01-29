@@ -188,7 +188,7 @@ func TestPrivateBookRoutes(t *testing.T) {
 	book := &model.Book{
 		Title:  RandomWord(3),
 		Author: RandomWord(2),
-		UserID: userIDs[RandomInt(0, 1)],
+		UserID: userID,
 		Status: RandomInt(0, 1),
 		Meta:   meta,
 	}
@@ -378,7 +378,7 @@ func setUpBook() {
 			ID:     bookID,
 			Title:  RandomWord(3),
 			Author: RandomWord(2),
-			UserID: userIDs[RandomInt(0, 1)],
+			UserID: userID,
 			Status: RandomInt(0, 1),
 			Meta:   meta,
 		}
