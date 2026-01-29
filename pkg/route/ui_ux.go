@@ -35,28 +35,36 @@ const htmlShellTemplate = `<!doctype html>
   <style>
     :root{
       color-scheme: dark;
-      --bg:#050505;
-      --bg2:#070707;
-      --card:#0f0f10;
-      --panel:#0b0b0c;
-      --border:#222;
-      --border2:#2a2a2a;
+
+      /* Core palette */
+      --bg:#000;
+      --card:#0a0a0a;
+      --panel:#070707;
+
+      --border:#1f1f1f;
+      --border2:#2c2c2c;
+
       --text:#f5f5f5;
       --muted:#9ca3af;
-      --accent:#e5e5e5;
-      --good:#22c55e;
-      --warn:#f59e0b;
+      --accent:#ffffff;
+
       --dim:#6b7280;
-      --shadow: 0 18px 50px rgba(0,0,0,.55);
+
+      --shadow: 0 18px 55px rgba(0,0,0,.72);
       --radius: 1.1rem;
       --pad: clamp(.85rem, 2.2vw, 1.25rem);
+
+      /* Grid */
+      --grid-size: 28px;
+      --grid-line: rgba(255,255,255,.10);
+      --grid-glow: rgba(255,255,255,.05);
     }
 
     *{box-sizing:border-box;margin:0;padding:0}
     html{height:100%}
-    body{min-height:100%;}
+    body{min-height:100%}
 
-    /* ✅ Mobile-friendly layout: no weird bottom bands, no forced vertical centering */
+    /* Page */
     body{
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
       color:var(--text);
@@ -66,43 +74,60 @@ const htmlShellTemplate = `<!doctype html>
         calc(var(--pad) + env(safe-area-inset-bottom))
         calc(var(--pad) + env(safe-area-inset-left));
       overflow-x:hidden;
-
-      /* ✅ Soft black + subtle square grid */
-      background:
-        radial-gradient(900px circle at 15% -10%, rgba(255,255,255,.07), transparent 60%),
-        radial-gradient(700px circle at 85% -5%, rgba(255,255,255,.06), transparent 65%),
-        linear-gradient(180deg, #0b0b0c 0%, #050505 72%),
-        /* grid lines */
-        repeating-linear-gradient(0deg,
-          rgba(255,255,255,.06) 0px,
-          rgba(255,255,255,.06) 1px,
-          transparent 1px,
-          transparent 28px),
-        repeating-linear-gradient(90deg,
-          rgba(255,255,255,.05) 0px,
-          rgba(255,255,255,.05) 1px,
-          transparent 1px,
-          transparent 28px);
-      background-attachment: fixed;
-      background-blend-mode: screen, screen, normal, normal, normal;
+      background: var(--bg);
+      position: relative;
     }
 
-    /* Wrap */
-    .wrap{width:100%;max-width:1100px;margin:0 auto;}
+    /* Grid overlay */
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(800px circle at 18% -10%, var(--grid-glow), transparent 60%),
+        radial-gradient(700px circle at 86% -6%,  var(--grid-glow), transparent 65%),
+        repeating-linear-gradient(
+          90deg,
+          var(--grid-line) 0px,
+          var(--grid-line) 1px,
+          transparent 1px,
+          transparent var(--grid-size)
+        ),
+        repeating-linear-gradient(
+          0deg,
+          var(--grid-line) 0px,
+          var(--grid-line) 1px,
+          transparent 1px,
+          transparent var(--grid-size)
+        );
+      opacity: .95;
+    }
+
+    /* Layout wrapper */
+    .wrap{
+      width:100%;
+      max-width:1100px;
+      margin:0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
     .card{
       border-radius:var(--radius);
       border:1px solid var(--border);
       background:
-        radial-gradient(circle at top left, rgba(255,255,255,.05) 0, rgba(255,255,255,0) 55%),
-        radial-gradient(circle at bottom right, rgba(255,255,255,.03) 0, rgba(255,255,255,0) 60%),
+        radial-gradient(circle at top left, rgba(255,255,255,.06) 0, rgba(255,255,255,0) 55%),
+        radial-gradient(circle at bottom right, rgba(255,255,255,.04) 0, rgba(255,255,255,0) 60%),
         var(--card);
       box-shadow: var(--shadow);
       padding: clamp(.9rem, 2vw, 1.1rem);
       position:relative;
-      overflow:hidden;
+      overflow:hidden; /* keep everything clipped */
     }
 
-    /* Top-left "Back to Home" */
+    /* Floating Home */
     .home-fab{
       position: sticky;
       top: calc(.25rem + env(safe-area-inset-top));
@@ -113,16 +138,16 @@ const htmlShellTemplate = `<!doctype html>
       padding:.45rem .65rem;
       border-radius:999px;
       border:1px solid var(--border);
-      background: rgba(11,11,12,.9);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+      background: rgba(0,0,0,.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 10px 24px rgba(0,0,0,.55);
       color: var(--accent);
       text-decoration:none;
       margin-bottom:.75rem;
       width: fit-content;
     }
-    .home-fab:hover{background: rgba(17,17,17,.92); border-color: var(--border2)}
+    .home-fab:hover{background: rgba(0,0,0,.9); border-color: var(--border2)}
     .home-fab .ico svg{stroke: var(--accent)}
 
     /* Header block */
@@ -150,7 +175,7 @@ const htmlShellTemplate = `<!doctype html>
     }
     p{font-size:.92rem;line-height:1.6;color:var(--muted)}
 
-    /* Rainbow animated headline (kept for vibes) */
+    /* Rainbow headline */
     .rainbow{
       background: linear-gradient(90deg,
         #ff3b3b, #ffb13b, #fff13b, #3bff7a, #3bbcff, #7a3bff, #ff3bbf, #ff3b3b);
@@ -168,48 +193,81 @@ const htmlShellTemplate = `<!doctype html>
       .rainbow{animation:none}
     }
 
+    /* Stack badges */
+    .stack{display:flex;align-items:center;gap:.55rem;margin-top:.65rem;flex-wrap:wrap}
+    .stack-badge{
+      display:inline-flex;align-items:center;gap:.45rem;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.60);
+      border-radius:999px;
+      padding:.28rem .6rem;
+      font-size:.78rem;
+      color:var(--muted);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .stack-badge svg{width:16px;height:16px;display:block}
+    .stack-badge strong{color:var(--accent);font-weight:600}
+
     /* Pills */
     .pill-row{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.75rem}
     .pill{
       font-size:.7rem;text-transform:uppercase;letter-spacing:.16em;
       padding:.22rem .55rem;border-radius:999px;border:1px solid var(--border);
       color:var(--muted);display:inline-flex;gap:.4rem;align-items:center;
-      background: rgba(0,0,0,.12);
+      background: rgba(0,0,0,.30);
     }
     .pill strong{color:var(--accent);font-weight:600}
 
     /* Panel */
     .panel{
       border:1px solid var(--border);
-      background: rgba(11,11,12,.72);
+      background: rgba(0,0,0,.55);
       border-radius:1rem;
       padding:.9rem;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      overflow:hidden;
     }
 
-    .actions{display:flex;gap:.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .actions{
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      min-width: 0;
+    }
+
     button{
-      cursor:pointer;border:1px solid var(--border);
-      background:#0b0b0c;color:var(--accent);
-      border-radius:.8rem;padding:.55rem .85rem;font-size:.88rem;
+      cursor:pointer;
+      border:1px solid var(--border);
+      background:#000;
+      color:var(--accent);
+      border-radius:.8rem;
+      padding:.55rem .85rem;
+      font-size:.88rem;
       transition: transform .08s ease, background .12s ease, border-color .12s ease;
       white-space:nowrap;
     }
-    button:hover{background:#111;border-color:var(--border2)}
+    button:hover{background:#0b0b0b;border-color:var(--border2)}
     button:active{transform: translateY(1px)}
+
     .hint{font-size:.75rem;color:var(--dim);margin-top:.55rem}
+
     input{
       width:100%;
       margin-top:.45rem;
       padding:.62rem .75rem;
       border-radius:.8rem;
       border:1px solid var(--border);
-      background:#050505;
+      background:#000;
       color:var(--accent);
       outline:none;
+      max-width: 100%;
+      font-size: 16px; /* ✅ prevent iOS zoom */
     }
-    input:focus{border-color:var(--border2)}
+    input:focus{border-color: var(--border2)}
 
     .muted{color:var(--muted);font-size:.82rem}
     .right{white-space:nowrap}
@@ -219,35 +277,72 @@ const htmlShellTemplate = `<!doctype html>
       font-size:.82rem;color:var(--muted)
     }
 
-    /* Nav chips (mobile friendly) */
+    /* ------------------------------------------------------------
+       ✅ NAV: desktop/tablet = scroll row + fade edges
+       ✅ mobile = grid menu (no horizontal scroll)
+    ------------------------------------------------------------ */
+    .nav-wrap{
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      margin-top:.75rem;
+    }
+
+    /* Default: horizontal scroller */
     .nav{
       display:flex;
       gap:.5rem;
-      margin-top:.75rem;
-      overflow:auto;
-      padding-bottom:.25rem;
+      width:100%;
+      max-width:100%;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding: .15rem .1rem .35rem .1rem;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
       scroll-snap-type: x proximity;
+      overscroll-behavior-x: contain;
+      white-space: nowrap;
     }
     .nav::-webkit-scrollbar{display:none}
 
+    .nav-wrap::before,
+    .nav-wrap::after{
+      content:"";
+      position:absolute;
+      top:0;
+      bottom:0;
+      width: 26px;
+      pointer-events:none;
+      z-index: 2;
+    }
+    .nav-wrap::before{
+      left:0;
+      background: linear-gradient(90deg, rgba(10,10,10,1) 0%, rgba(10,10,10,0) 100%);
+    }
+    .nav-wrap::after{
+      right:0;
+      background: linear-gradient(270deg, rgba(10,10,10,1) 0%, rgba(10,10,10,0) 100%);
+    }
+
     .nav a{
       flex:0 0 auto;
-      display:inline-flex;gap:.5rem;align-items:center;
+      display:inline-flex;
+      gap:.5rem;
+      align-items:center;
       border:1px solid var(--border);
       border-radius:999px;
       padding:.42rem .75rem;
       font-size:.8rem;
       color:var(--accent);
-      background: rgba(11,11,12,.8);
+      background: rgba(0,0,0,.65);
       transition: background .12s ease, border-color .12s ease;
       white-space:nowrap;
       scroll-snap-align: start;
       text-decoration:none;
+      max-width: 100%;
     }
-    .nav a:hover{background:rgba(17,17,17,.9)}
-    .nav a.active{border-color:#3a3a3a;background:rgba(20,20,20,.95)}
+    .nav a:hover{background: rgba(0,0,0,.85); border-color: var(--border2)}
+    .nav a.active{border-color:#3a3a3a;background: rgba(0,0,0,.92)}
 
     .ico{width:16px;height:16px;display:inline-block}
     .ico svg{
@@ -255,32 +350,43 @@ const htmlShellTemplate = `<!doctype html>
       fill:none;stroke:var(--muted);stroke-width:1.8;
       stroke-linecap:round;stroke-linejoin:round
     }
-    .nav a.active .ico svg{stroke:var(--accent)}
+    .nav a.active .ico svg{stroke: var(--accent)}
 
-    /* Stack badges */
-    .stack{display:flex;align-items:center;gap:.55rem;margin-top:.65rem;flex-wrap:wrap}
-    .stack-badge{
-      display:inline-flex;align-items:center;gap:.45rem;
-      border:1px solid var(--border);
-      background: rgba(11,11,12,.8);
-      border-radius:999px;
-      padding:.28rem .6rem;
-      font-size:.78rem;
-      color:var(--muted);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+    /* ✅ Mobile: grid menu (fixes the “weird” look) */
+    @media (max-width: 520px){
+      .nav-wrap::before,
+      .nav-wrap::after{ display:none; }
+
+      .nav{
+        overflow: visible;
+        white-space: normal;
+        scroll-snap-type: none;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .5rem;
+        padding: .25rem 0 0 0;
+      }
+
+      .nav a{
+        width: 100%;
+        justify-content: center;
+        padding: .58rem .7rem;
+        border-radius: .9rem;
+        background: rgba(0,0,0,.78);
+      }
     }
-    .stack-badge svg{width:16px;height:16px;display:block}
-    .stack-badge strong{color:var(--accent);font-weight:600}
+    @media (min-width: 420px) and (max-width: 520px){
+      .nav{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
 
-    /* Table container: scroll only inside on mobile (no body horizontal scroll) */
+    /* Table container */
     .table{
       width:100%;
       margin-top:1rem;
       border:1px solid var(--border);
       border-radius:1rem;
       overflow:hidden;
-      background: rgba(0,0,0,.06);
+      background: rgba(0,0,0,.35);
     }
     .table-scroll{
       width:100%;
@@ -294,27 +400,27 @@ const htmlShellTemplate = `<!doctype html>
       letter-spacing:.18em;
       text-transform:uppercase;
       color:var(--muted);
-      background: rgba(11,11,12,.9);
+      background: rgba(0,0,0,.80);
       border-bottom:1px solid var(--border);
       padding:.8rem .9rem;
       position: sticky;
       top: 0;
       z-index: 1;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
     tbody td{
       padding:.78rem .9rem;
-      border-bottom:1px solid rgba(34,34,34,.65);
+      border-bottom:1px solid rgba(255,255,255,.08);
       vertical-align:top;
       font-size:.92rem;
       color:var(--accent);
     }
-    tbody tr:hover{background:rgba(255,255,255,.02)}
+    tbody tr:hover{background:rgba(255,255,255,.03)}
 
     pre{
       margin-top:1rem;
-      background:#050505;
+      background:#000;
       border:1px solid var(--border);
       border-radius:1rem;
       padding:1rem;
@@ -323,32 +429,42 @@ const htmlShellTemplate = `<!doctype html>
     }
 
     .footer{
-      margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--border);
-      display:flex;justify-content:space-between;gap:.75rem;
-      font-size:.75rem;color:var(--muted);
+      margin-top:1rem;
+      padding-top:.85rem;
+      border-top:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      gap:.75rem;
+      font-size:.75rem;
+      color:var(--muted);
       flex-wrap:wrap;
     }
 
     a{color:var(--accent);text-decoration:none}
     a:hover{text-decoration:underline}
 
-    /* Mobile breakpoints */
+    /* Breakpoints */
     @media (max-width: 860px){
       .top{grid-template-columns: 1fr}
       .panel{padding:.85rem}
       table{min-width: 640px}
     }
+    @media (max-width: 520px){
+      .panel{padding:.78rem;border-radius:.95rem}
+      .actions{align-items: stretch}
+      button{width:100%}
+    }
     @media (max-width: 420px){
-      body{padding:
-        calc(.9rem + env(safe-area-inset-top))
-        calc(.75rem + env(safe-area-inset-right))
-        calc(.9rem + env(safe-area-inset-bottom))
-        calc(.75rem + env(safe-area-inset-left));
+      body{
+        padding:
+          calc(.9rem + env(safe-area-inset-top))
+          calc(.75rem + env(safe-area-inset-right))
+          calc(.9rem + env(safe-area-inset-bottom))
+          calc(.75rem + env(safe-area-inset-left));
       }
       .card{padding:.95rem}
       h1{font-size:1.18rem}
       p{font-size:.9rem}
-      button{width:100%}
       .actions{gap:.55rem}
       .actions > *{flex:1 1 auto}
     }
@@ -366,8 +482,7 @@ const htmlShellTemplate = `<!doctype html>
   <script>
     const $ = (sel) => document.querySelector(sel)
 
-    // ✅ Always scroll to top when navigating via menu links.
-    // We also disable browser scroll restoration to avoid "stuck mid-page" on navigation.
+    // Always scroll to top when navigating via internal links.
     try { history.scrollRestoration = 'manual' } catch(e) {}
 
     function forceTopOnce(){
@@ -383,10 +498,7 @@ const htmlShellTemplate = `<!doctype html>
       }catch(e){}
     }
 
-    window.addEventListener('pageshow', () => {
-      // Handles normal nav + bfcache restores
-      consumeForceTop()
-    })
+    window.addEventListener('pageshow', () => { consumeForceTop() })
 
     document.addEventListener('click', (ev) => {
       const a = ev.target && ev.target.closest ? ev.target.closest('a') : null
@@ -394,13 +506,10 @@ const htmlShellTemplate = `<!doctype html>
       if(a.hasAttribute('target')) return
       const href = a.getAttribute('href') || ''
       if(!href) return
-      // internal only
       if(href.startsWith('#')) return
       if(href.startsWith('http://') || href.startsWith('https://')) return
 
-      // If user clicks any menu/internal link, force top on next page.
       forceTopOnce()
-      // And for same-page navigations, do it immediately too.
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     })
 
@@ -512,7 +621,7 @@ func uiNav(activePath string) string {
 	}
 
 	var b strings.Builder
-	b.WriteString(`<div class="nav">`)
+	b.WriteString(`<div class="nav-wrap"><div class="nav">`)
 	for _, it := range items {
 		cl := ""
 		if it.href == activePath {
@@ -525,7 +634,7 @@ func uiNav(activePath string) string {
 			html.EscapeString(it.label),
 		))
 	}
-	b.WriteString(`</div>`)
+	b.WriteString(`</div></div>`)
 	return b.String()
 }
 
